@@ -24,14 +24,15 @@
     <!-- Questions -->
     <div id="questionsContainer">
         {% for q in questions %}
+        {% set q_idx = loop.index0 %}
         <div class="question-card animate-in" id="qCard{{ loop.index0 }}" style="display:{{ 'block' if loop.first else 'none' }};">
             <div class="question-number">Question {{ loop.index }} / {{ questions|length }} · {{ q.topic }}</div>
             <div class="question-text">{{ q.question }}</div>
             <div class="options-grid">
                 {% for opt in q.options %}
-                <button class="option-btn" data-question="{{ loop.index0 }}" data-option="{{ loop.index0 }}"
-                        onclick="selectAnswer({{ loop.index0 - 1 }}, {{ loop.index0 }}, this)"
-                        id="opt_{{ loop.index0 - 1 }}_{{ loop.index0 }}">
+                <button class="option-btn" data-question="{{ q_idx }}" data-option="{{ loop.index0 }}"
+                        onclick="selectAnswer({{ q_idx }}, {{ loop.index0 }}, this)"
+                        id="opt_{{ q_idx }}_{{ loop.index0 }}">
                     <span class="option-letter">{{ ['A','B','C','D'][loop.index0] }}</span>
                     {{ opt }}
                 </button>

@@ -22,6 +22,14 @@ RESOURCES = {
             "icon": "📚",
         },
         {
+            "title": "Extra Practice Quiz: ML Basics",
+            "type": "quiz",
+            "url": "/quiz/Machine%20Learning%20Basics",
+            "level": "Beginner",
+            "description": "Practice fundamental ML concepts with adaptive quiz questions.",
+            "icon": "🧪",
+        },
+        {
             "title": "ML Cheatsheet",
             "type": "article",
             "url": "https://ml-cheatsheet.readthedocs.io/en/latest/",
@@ -40,6 +48,14 @@ RESOURCES = {
     ],
 
     "Linear Regression": [
+        {
+            "title": "Linear Regression Basics",
+            "type": "video",
+            "url": "https://www.youtube.com/watch?v=nk2CQITm_eo",
+            "level": "Beginner",
+            "description": "Beginner-friendly walkthrough of slope, intercept, and line fitting.",
+            "icon": "▶️",
+        },
         {
             "title": "Linear Regression Explained - StatQuest",
             "type": "video",

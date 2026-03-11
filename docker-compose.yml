@@ -1,0 +1,52 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    container_name: eduvora-db
+    environment:
+      POSTGRES_USER: eduvora
+      POSTGRES_PASSWORD: eduvora
+      POSTGRES_DB: eduvora
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+
+  code-runner:
+    build:
+      context: ./docker/code_runner
+    container_name: eduvora-code-runner
+    ports:
+      - "8001:8001"
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: eduvora-backend
+    environment:
+      SECRET_KEY: change-this-secret
+      DATABASE_URL: postgresql+psycopg2://eduvora:eduvora@db:5432/eduvora
+      CODE_RUNNER_URL: http://code-runner:8001
+    depends_on:
+      - db
+      - code-runner
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: eduvora-frontend
+    environment:
+      NEXT_PUBLIC_API_BASE: http://localhost:8000
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:

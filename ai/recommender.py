@@ -3,6 +3,15 @@ Personalized Recommender - Maps weak areas + learning level to curated resources
 """
 from data.resources import RESOURCES
 
+PREREQUISITE_TOPICS = {
+    "Linear Regression": ["Machine Learning Basics"],
+    "Classification": ["Machine Learning Basics", "Probability & Statistics"],
+    "Neural Networks": ["Linear Algebra", "Machine Learning Basics"],
+    "Decision Trees": ["Machine Learning Basics"],
+    "Clustering": ["Machine Learning Basics", "Linear Algebra"],
+    "Overfitting & Underfitting": ["Machine Learning Basics", "Linear Regression"],
+}
+
 
 def get_recommendations(level: str, weak_areas: list, limit: int = 5) -> list:
     """
@@ -31,7 +40,26 @@ def get_recommendations(level: str, weak_areas: list, limit: int = 5) -> list:
         for resource in level_filtered[:2]:  # max 2 per weak topic
             recommendations.append({**resource, "topic": topic, "priority": "high"})
 
-    # Fill remaining slots with general level-appropriate content
+    # Add prerequisite/easier topic resources for weak topics.
+    covered_topics = set(weak_areas)
+    for weak_topic in weak_areas:
+        for prereq in PREREQUISITE_TOPICS.get(weak_topic, []):
+            if prereq in covered_topics:
+                continue
+            prereq_resources = RESOURCES.get(prereq, [])
+            prereq_match = [
+                r for r in prereq_resources
+                if r.get("level") in ("Beginner", "All", level)
+            ]
+            if prereq_match:
+                recommendations.append({
+                    **prereq_match[0],
+                    "topic": prereq,
+                    "priority": "normal",
+                })
+                covered_topics.add(prereq)
+
+    # Fill remaining slots with general level-appropriate content.
     general = RESOURCES.get("General", [])
     level_general = [r for r in general if r.get("level") in (level, "All")]
     remaining = limit - len(recommendations)
