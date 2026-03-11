@@ -19,25 +19,27 @@ def _build_system_prompt(profile: dict, user_name: str) -> str:
     )
 
 
-def _llm_chat(message: str, profile: dict, user_name: str) -> str | None:
+def _gemini_chat(message: str, profile: dict, user_name: str) -> str | None:
     if not settings.gemini_api_key:
         return None
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={settings.gemini_api_key}"
+    url = (
+        f"https://generativelanguage.googleapis.com/v1beta/models/"
+        f"{settings.gemini_model}:generateContent?key={settings.gemini_api_key}"
+    )
     headers = {
         "Content-Type": "application/json",
     }
-    
+
     system_instruction = _build_system_prompt(profile, user_name)
-    
+
     payload = {
-        "contents": [
-            {"role": "user", "parts": [{"text": system_instruction + "\n\nStudent asks: " + message}]}
-        ],
+        "system_instruction": {"parts": [{"text": system_instruction}]},
+        "contents": [{"role": "user", "parts": [{"text": message}]}],
         "generationConfig": {
             "temperature": settings.tutor_temperature,
             "maxOutputTokens": settings.tutor_max_tokens,
-        }
+        },
     }
 
     try:
@@ -45,7 +47,9 @@ def _llm_chat(message: str, profile: dict, user_name: str) -> str | None:
             response = client.post(url, headers=headers, json=payload)
             response.raise_for_status()
             data = response.json()
-            return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+            parts = data["candidates"][0]["content"]["parts"]
+            text = "".join(p.get("text", "") for p in parts).strip()
+            return text or None
     except Exception as e:
         print(f"Gemini API Error: {e}")
         return None
@@ -91,8 +95,8 @@ def _fallback_answer(message: str) -> str:
 
 def tutor_reply(message: str, context: dict | None = None, user_name: str = "Student") -> dict:
     profile = context or {}
-    answer = _llm_chat(message, profile, user_name)
-    mode = "llm"
+    answer = _gemini_chat(message, profile, user_name)
+    mode = "gemini"
     if not answer:
         answer = _fallback_answer(message)
         mode = "fallback"

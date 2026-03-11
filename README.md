@@ -39,5 +39,5 @@ docker compose up --build
 ## Generative AI Tutor
 - Endpoint: `POST /api/tutor/chat`
 - Uses learner profile context (`knowledge_level`, `learning_speed`, weak/strong topics) for personalized responses.
-- If `OPENAI_API_KEY` is configured, tutor runs in LLM mode using chat completions.
+- If `GEMINI_API_KEY` is configured, tutor runs in Gemini generative mode.
 - If no key is configured or provider fails, it automatically falls back to rule-based responses.

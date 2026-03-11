@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     tutor_temperature: float = 0.4
     tutor_max_tokens: int = 500
     gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.0-flash"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
