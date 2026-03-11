@@ -305,13 +305,30 @@ def quiz(topic):
         title = "Diagnostic Quiz — Let's find your level!"
         subtitle = "Answer honestly. This helps us personalize your learning path."
     else:
+        # 'personalized' and 'all' mean no specific topic filter
+        topic_filter = topic if topic not in ("all", "personalized") else None
+        use_weak = topic == "personalized"
+
         questions = generate_quiz(
-            topic=topic if topic != "all" else None,
+            topic=topic_filter,
             level=level,
-            weak_areas=weak_areas if topic == "personalized" else None,
+            weak_areas=weak_areas if use_weak else None,
         )
-        title = f"Quiz: {topic}" if topic != "all" else "Practice Quiz"
-        subtitle = f"Difficulty tuned for {level} level"
+
+        # Fallback: if no questions generated, use diagnostic quiz
+        if not questions:
+            questions = generate_diagnostic_quiz()
+
+        if topic == "personalized":
+            title = "Personalized Quiz"
+            subtitle = f"AI-tuned to your {level} level and weak areas"
+        elif topic == "all":
+            title = "Full Practice Quiz"
+            subtitle = f"Covering all topics at {level} difficulty"
+        else:
+            title = f"Quiz: {topic}"
+            subtitle = f"Difficulty tuned for {level} level"
+
 
     # Store questions in session for validation
     session["current_quiz"] = {
@@ -572,5 +589,5 @@ def server_error(e):
 if __name__ == "__main__":
     print("🎓 EduVora AI-LMS starting...")
     print(f"   Firebase: {'✅ Connected' if firebase_initialized else '⚠️  Demo Mode'}")
-    print("   Visit: http://localhost:5000")
-    app.run(debug=True, port=5000)
+    print("   Visit: http://localhost:5001")
+    app.run(debug=True, port=5001)
