@@ -76,7 +76,10 @@
             const data = await res.json();
             if (data.redirect) window.location.href = data.redirect;
         } catch (err) {
-            errDiv.textContent = err.code === 'auth/email-already-in-use' ? 'Email already in use.' : 'Registration failed. Please try again.';
+            console.error("Firebase Auth Error:", err);
+            errDiv.textContent = err.code === 'auth/email-already-in-use' 
+                ? 'Email already in use.' 
+                : `Registration failed: ${err.message}`;
             errDiv.style.display = 'block';
             btn.disabled = false; btn.innerHTML = '🎓 Create Free Account';
         }
