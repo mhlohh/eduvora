@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}EduVora — AI-Powered LMS{% endblock %}</title>
+    <meta name="description" content="EduVora: AI-Powered Smart Learning Management System with personalized learning paths, smart quizzes, and AI study assistant.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    {% if session.get('user_id') %}
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <div class="logo-icon">🎓</div>
+                <span class="logo-text">EduVora</span>
+            </div>
+            <nav class="sidebar-nav">
+                <span class="nav-section-label">Learning</span>
+                <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                    <span class="nav-icon">🏠</span> Dashboard
+                </a>
+                <a href="{{ url_for('quiz', topic='personalized') }}" class="nav-item {% if request.endpoint == 'quiz' %}active{% endif %}">
+                    <span class="nav-icon">📝</span> Take Quiz
+                </a>
+                <a href="{{ url_for('recommendations') }}" class="nav-item {% if request.endpoint == 'recommendations' %}active{% endif %}">
+                    <span class="nav-icon">💡</span> Recommendations
+                </a>
+                <a href="{{ url_for('progress') }}" class="nav-item {% if request.endpoint == 'progress' %}active{% endif %}">
+                    <span class="nav-icon">📊</span> My Progress
+                </a>
+
+                <span class="nav-section-label" style="margin-top:8px;">AI Tools</span>
+                <a href="{{ url_for('chatbot') }}" class="nav-item {% if request.endpoint == 'chatbot' %}active{% endif %}">
+                    <span class="nav-icon">🤖</span> AI Study Assistant
+                </a>
+
+                <span class="nav-section-label" style="margin-top:8px;">Topics</span>
+                <a href="{{ url_for('quiz', topic='Machine Learning Basics') }}" class="nav-item">
+                    <span class="nav-icon">🧠</span> ML Basics
+                </a>
+                <a href="{{ url_for('quiz', topic='Neural Networks') }}" class="nav-item">
+                    <span class="nav-icon">⚡</span> Neural Networks
+                </a>
+                <a href="{{ url_for('quiz', topic='Data Preprocessing') }}" class="nav-item">
+                    <span class="nav-icon">🔧</span> Data Science
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar">{{ session.get('user_name', 'S')[0].upper() }}</div>
+                    <div class="user-details">
+                        <div class="user-name">{{ session.get('user_name', 'Student') }}</div>
+                        <div class="user-email">{{ session.get('user_email', '') }}</div>
+                    </div>
+                </div>
+                <a href="{{ url_for('logout') }}" class="nav-item mt-1" style="color: var(--danger);">
+                    <span class="nav-icon">🚪</span> Logout
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="top-bar">
+                <div>
+                    <div class="page-title">{% block page_title %}Dashboard{% endblock %}</div>
+                    <div class="fs-sm text-muted">{% block page_subtitle %}{% endblock %}</div>
+                </div>
+                <div class="top-bar-actions">
+                    {% block top_actions %}{% endblock %}
+                    <a href="{{ url_for('quiz', topic='diagnostic') }}" class="btn btn-primary btn-sm">
+                        ⚡ Quick Quiz
+                    </a>
+                </div>
+            </div>
+            <div class="content-area">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    {% block auth_content %}{% endblock %}
+    {% endif %}
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<span>${icons[type] || ''}</span> ${message}`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        // Animate elements on load
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.animate-in').forEach((el, i) => {
+                el.style.animationDelay = `${i * 0.08}s`;
+                el.style.opacity = '0';
+            });
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

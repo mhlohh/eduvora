@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Learning Recommendations — EduVora{% endblock %}
+{% block page_title %}💡 Personalized Recommendations{% endblock %}
+{% block page_subtitle %}AI-curated resources based on your level and weak areas{% endblock %}
+
+{% block content %}
+<!-- Level + Info Row -->
+<div class="grid-2 mb-4">
+    <div class="card animate-in" style="background:linear-gradient(135deg, rgba(99,102,241,0.1), rgba(139,92,246,0.05)); border-color:rgba(99,102,241,0.3);">
+        <div class="flex items-center gap-2 mb-2">
+            <span class="level-badge {{ level_info.badge_class }}">{{ level_info.icon }} {{ level }}</span>
+        </div>
+        <div class="card-title mb-1">Your Learning Level</div>
+        <p class="fs-sm text-secondary">{{ level_info.description }}</p>
+    </div>
+    <div class="card animate-in">
+        <div class="card-title mb-2">⚠️ Focus Topics</div>
+        {% if weak_areas %}
+        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            {% for area in weak_areas %}
+            <span class="topic-pill weak">{{ area }}</span>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="fs-sm text-muted">No weak areas! Explore advanced resources below.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Learning Roadmap -->
+<div class="card mb-4 animate-in">
+    <div class="card-header">
+        <div>
+            <div class="card-title">🗺️ {{ roadmap.title }}</div>
+            <div class="card-subtitle">Estimated: {{ roadmap.estimated_time }}</div>
+        </div>
+    </div>
+    <p class="fs-sm text-secondary mb-3">{{ roadmap.description }}</p>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+        {% for step in roadmap.steps %}
+        <div style="display:flex; gap:10px; align-items:flex-start; padding:12px; background:rgba(255,255,255,0.03); border-radius:10px; border:1px solid var(--border);">
+            <div class="step-num">{{ loop.index }}</div>
+            <div class="fs-sm text-secondary">{{ step }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Improvement Tips -->
+{% if tips %}
+<div class="card mb-4 animate-in">
+    <div class="card-header"><div class="card-title">🎯 Improvement Tips</div></div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+        {% for tip in tips %}
+        <div style="display:flex; gap:12px; padding:14px; background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.15); border-radius:10px;">
+            <span style="font-size:1.2rem;">💡</span>
+            <div>
+                <div class="fs-sm fw-bold mb-1">{{ tip.topic }}</div>
+                <div class="fs-sm text-secondary">{{ tip.tip }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Resource Cards Grid -->
+<div class="card-header mb-3" style="padding:0;">
+    <div class="card-title">📚 Recommended Resources</div>
+    <span class="topic-pill">{{ recommendations|length }} resources</span>
+</div>
+<div class="grid-auto animate-in">
+    {% for rec in recommendations %}
+    <a href="{{ rec.url }}" target="_blank" class="resource-card" style="text-decoration:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span class="resource-type">{{ rec.type|upper }}</span>
+            {% if rec.priority == 'high' %}
+            <span class="priority-badge high">Priority</span>
+            {% else %}
+            <span class="priority-badge normal">{{ rec.level }}</span>
+            {% endif %}
+        </div>
+        <div style="font-size:2rem;">{{ rec.icon }}</div>
+        <div class="resource-title">{{ rec.title }}</div>
+        <div class="resource-desc">{{ rec.description }}</div>
+        <div class="flex gap-1 mt-1">
+            <span class="topic-pill">{{ rec.topic }}</span>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+
+<!-- CTA Row -->
+<div class="flex gap-2 mt-4 animate-in" style="flex-wrap:wrap;">
+    <a href="{{ url_for('quiz', topic='personalized') }}" class="btn btn-primary">📝 Practice Quiz</a>
+    <a href="{{ url_for('chatbot') }}" class="btn btn-secondary">🤖 Ask AI Assistant</a>
+    <a href="{{ url_for('progress') }}" class="btn btn-secondary">📊 View Progress</a>
+</div>
+{% endblock %}

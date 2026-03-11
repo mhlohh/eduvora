@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Register — EduVora{% endblock %}
+
+{% block auth_content %}
+<div class="auth-page">
+    <div class="auth-card animate-scale">
+        <div class="auth-logo">
+            <div class="logo-icon">🎓</div>
+            <h1>EduVora</h1>
+            <p style="color: var(--text-secondary); font-size:0.85rem; margin-top:6px;">Join 10,000+ learners today</p>
+        </div>
+        <p class="auth-subtitle">Create your free account and start your personalized AI learning journey.</p>
+
+        <form id="registerForm">
+            <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" id="name" class="form-control" placeholder="Your full name" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" id="email" class="form-control" placeholder="student@example.com" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" id="password" class="form-control" placeholder="At least 6 characters" required minlength="6">
+            </div>
+
+            <div id="errorMsg" style="display:none; color: var(--danger); font-size:0.85rem; margin-bottom:14px; padding:10px 14px; background:rgba(239,68,68,0.1); border-radius:8px; border:1px solid rgba(239,68,68,0.2);"></div>
+
+            <button type="submit" class="btn btn-primary w-full btn-lg" id="registerBtn" style="justify-content:center;">
+                🎓 Create Free Account
+            </button>
+        </form>
+
+        <div class="form-divider">or</div>
+
+        <a href="{{ url_for('demo_login') }}" class="btn btn-secondary w-full btn-lg" style="justify-content:center;">
+            👨‍🎓 Try Demo (No Account Needed)
+        </a>
+
+        <p class="text-center mt-2" style="font-size:0.85rem; color:var(--text-secondary);">
+            Already have an account? <a href="{{ url_for('login') }}">Sign in →</a>
+        </p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if firebase_config.apiKey %}
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    const app = initializeApp({{ firebase_config | tojson }});
+    const auth = getAuth(app);
+
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('registerBtn');
+        const errDiv = document.getElementById('errorMsg');
+        btn.disabled = true; btn.textContent = '⏳ Creating account...'; errDiv.style.display = 'none';
+
+        try {
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const cred = await createUserWithEmailAndPassword(auth, email, password);
+            await updateProfile(cred.user, { displayName: name });
+            const idToken = await cred.user.getIdToken();
+
+            const res = await fetch('/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idToken, email, name, uid: cred.user.uid })
+            });
+            const data = await res.json();
+            if (data.redirect) window.location.href = data.redirect;
+        } catch (err) {
+            errDiv.textContent = err.code === 'auth/email-already-in-use' ? 'Email already in use.' : 'Registration failed. Please try again.';
+            errDiv.style.display = 'block';
+            btn.disabled = false; btn.innerHTML = '🎓 Create Free Account';
+        }
+    });
+</script>
+{% else %}
+<script>
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('registerBtn');
+        btn.disabled = true; btn.textContent = '⏳ Creating account...';
+        const name = document.getElementById('name').value;
+        const email = document.getElementById('email').value;
+        const uid = `user_${Date.now()}`;
+        const res = await fetch('/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, name, uid })
+        });
+        const data = await res.json();
+        if (data.redirect) window.location.href = data.redirect;
+        else { btn.disabled = false; btn.innerHTML = '🎓 Create Free Account'; }
+    });
+</script>
+{% endif %}
+{% endblock %}

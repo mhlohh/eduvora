@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}AI Study Assistant — EduVora{% endblock %}
+{% block page_title %}🤖 AI Study Assistant{% endblock %}
+{% block page_subtitle %}EduBot — Ask me anything about ML, Data Science, Statistics{% endblock %}
+
+{% block content %}
+<div class="chatbot-container animate-in">
+    <!-- Suggested Questions -->
+    <div class="suggested-questions" id="suggestedQs">
+        <button class="suggested-btn" onclick="sendSuggested(this)">What is overfitting?</button>
+        <button class="suggested-btn" onclick="sendSuggested(this)">Explain gradient descent</button>
+        <button class="suggested-btn" onclick="sendSuggested(this)">What is a neural network?</button>
+        <button class="suggested-btn" onclick="sendSuggested(this)">How does K-Means work?</button>
+        <button class="suggested-btn" onclick="sendSuggested(this)">What is regularization?</button>
+        <button class="suggested-btn" onclick="sendSuggested(this)">Difference between classification and regression?</button>
+    </div>
+
+    <!-- Chat Messages -->
+    <div class="chat-messages" id="chatMessages">
+        <!-- Welcome message -->
+        <div class="chat-bubble animate-fade">
+            <div class="chat-avatar bot">🤖</div>
+            <div class="chat-content">
+                <strong>Hi! I'm EduBot 🎓</strong><br>
+                I'm your AI study assistant. I can help you understand:<br>
+                • Machine Learning concepts<br>
+                • Data Science & Statistics<br>
+                • Linear Algebra & Math<br>
+                • Python for ML<br><br>
+                Ask me anything! Use the suggestions above or type your question below.
+            </div>
+        </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="chat-input-area">
+        <input type="text" class="chat-input" id="chatInput"
+               placeholder="Ask EduBot anything... e.g. 'What is bias-variance tradeoff?'"
+               onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendMessage();}">
+        <button class="btn btn-primary" id="sendBtn" onclick="sendMessage()" style="flex-shrink:0;">
+            Send ➤
+        </button>
+    </div>
+</div>
+
+<script>
+let chatHistory = [];
+const messagesDiv = document.getElementById('chatMessages');
+const input = document.getElementById('chatInput');
+const sendBtn = document.getElementById('sendBtn');
+
+function createBubble(content, isUser) {
+    const bubble = document.createElement('div');
+    bubble.className = `chat-bubble animate-fade ${isUser ? 'user' : ''}`;
+    bubble.innerHTML = `
+        <div class="chat-avatar ${isUser ? 'user' : 'bot'}">${isUser ? '👤' : '🤖'}</div>
+        <div class="chat-content">${content}</div>
+    `;
+    return bubble;
+}
+
+function createTyping() {
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble animate-fade';
+    bubble.id = 'typingBubble';
+    bubble.innerHTML = `
+        <div class="chat-avatar bot">🤖</div>
+        <div class="chat-content"><div class="typing-dots"><span></span><span></span><span></span></div></div>
+    `;
+    return bubble;
+}
+
+function formatText(text) {
+    // Basic markdown-ish formatting
+    return text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/`(.*?)`/g, '<code style="background:rgba(99,102,241,0.15);padding:2px 6px;border-radius:4px;font-size:0.85em;">$1</code>')
+        .replace(/\n\n/g, '<br><br>')
+        .replace(/\n/g, '<br>')
+        .replace(/• /g, '&bull; ');
+}
+
+async function sendMessage(text) {
+    const message = text || input.value.trim();
+    if (!message) return;
+
+    input.value = '';
+    sendBtn.disabled = true;
+    document.getElementById('suggestedQs').style.display = 'none';
+
+    // Add user bubble
+    messagesDiv.appendChild(createBubble(message, true));
+    messagesDiv.appendChild(createTyping());
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+    try {
+        const res = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message, history: chatHistory.slice(-6) })
+        });
+        const data = await res.json();
+
+        document.getElementById('typingBubble')?.remove();
+        const response = data.response || data.error || 'Sorry, I could not process that.';
+        messagesDiv.appendChild(createBubble(formatText(response), false));
+
+        chatHistory.push({ role: 'user', content: message });
+        chatHistory.push({ role: 'model', content: response });
+    } catch {
+        document.getElementById('typingBubble')?.remove();
+        messagesDiv.appendChild(createBubble('⚠️ Connection error. Please try again.', false));
+    }
+
+    sendBtn.disabled = false;
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    input.focus();
+}
+
+function sendSuggested(btn) {
+    sendMessage(btn.textContent);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% block title %}My Progress — EduVora{% endblock %}
+{% block page_title %}📊 My Progress{% endblock %}
+{% block page_subtitle %}Detailed analytics of your learning journey{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<!-- ── Stats Row ──────────────────────────────────────── -->
+<div class="stats-grid mb-4 animate-in">
+    <div class="stat-card primary">
+        <div class="stat-icon primary">📚</div>
+        <div><div class="stat-value">{{ total_quizzes }}</div><div class="stat-label">Total Quizzes</div></div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-icon success">🎯</div>
+        <div><div class="stat-value">{{ avg_score }}%</div><div class="stat-label">Average Score</div></div>
+    </div>
+    <div class="stat-card warning">
+        <div class="stat-icon warning">🎓</div>
+        <div><div class="stat-value">{{ level }}</div><div class="stat-label">Current Level</div></div>
+    </div>
+    <div class="stat-card accent">
+        <div class="stat-icon accent">⚠️</div>
+        <div><div class="stat-value">{{ weak_summary.weak|length }}</div><div class="stat-label">Weak Topics</div></div>
+    </div>
+</div>
+
+<!-- ── Charts Row ─────────────────────────────────────── -->
+<div class="grid-2 mb-4">
+    <!-- Score Trend Line Chart -->
+    <div class="card animate-in">
+        <div class="card-header">
+            <div class="card-title">📈 Score Progress Over Time</div>
+            <span class="level-badge {{ level_info.badge_class }}" style="font-size:0.75rem;">{{ level_info.icon }} {{ level }}</span>
+        </div>
+        <canvas id="trendChart" height="200"></canvas>
+    </div>
+
+    <!-- Topic Radar / Bar Chart -->
+    <div class="card animate-in">
+        <div class="card-header">
+            <div class="card-title">🎯 Topic Mastery</div>
+            <span class="topic-pill">{{ topic_scores_raw|length }} topics</span>
+        </div>
+        <canvas id="topicChart" height="200"></canvas>
+    </div>
+</div>
+
+<!-- ── Topic Breakdown ────────────────────────────────── -->
+<div class="card mb-4 animate-in">
+    <div class="card-header"><div class="card-title">📋 Detailed Topic Breakdown</div></div>
+    {% if topic_scores_raw %}
+    <div style="display:flex; flex-direction:column; gap:12px;">
+        {% for topic, pct in topic_scores_raw.items()|sort(attribute='1') %}
+        <div class="topic-score-item">
+            <div class="topic-name" style="width:220px;">{{ topic }}</div>
+            <div class="topic-bar-wrap">
+                <div class="topic-bar-fill {{ 'good' if pct >= 70 else ('average' if pct >= 40 else 'weak') }}"
+                     style="width:{{ pct }}%"></div>
+            </div>
+            <div class="topic-pct {{ 'text-success' if pct >= 70 else ('text-warning' if pct >= 40 else 'text-danger') }}">{{ pct }}%</div>
+            <span class="topic-pill {{ 'strong' if pct >= 70 else ('weak' if pct < 40 else '') }}" style="font-size:0.65rem; white-space:nowrap;">
+                {{ '✅ Strong' if pct >= 70 else ('⚠️ Weak' if pct < 40 else '📚 Average') }}
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-muted fs-sm">Take quizzes to see your topic mastery breakdown.</p>
+    {% endif %}
+</div>
+
+<!-- ── Weak / Average / Strong Areas ─────────────────── -->
+<div class="grid-3 mb-4">
+    <!-- Weak -->
+    <div class="card animate-in" style="border-color:rgba(239,68,68,0.2);">
+        <div class="card-header">
+            <div class="card-title" style="color:#f87171;">🔴 Weak Areas</div>
+            <span class="topic-pill weak">{{ weak_summary.weak|length }}</span>
+        </div>
+        {% if weak_summary.weak %}
+        {% for item in weak_summary.weak %}
+        <div class="topic-score-item">
+            <div class="topic-name" style="width:auto;flex:1;">{{ item.topic }}</div>
+            <div class="fw-bold text-danger">{{ item.score }}%</div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p class="fs-xs text-muted">None! Great work 🎉</p>
+        {% endif %}
+    </div>
+    <!-- Average -->
+    <div class="card animate-in" style="border-color:rgba(245,158,11,0.2);">
+        <div class="card-header">
+            <div class="card-title" style="color:#fbbf24;">🟡 Average Areas</div>
+            <span class="topic-pill">{{ weak_summary.average|length }}</span>
+        </div>
+        {% if weak_summary.average %}
+        {% for item in weak_summary.average %}
+        <div class="topic-score-item">
+            <div class="topic-name" style="width:auto;flex:1;">{{ item.topic }}</div>
+            <div class="fw-bold text-warning">{{ item.score }}%</div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p class="fs-xs text-muted">No data yet</p>
+        {% endif %}
+    </div>
+    <!-- Strong -->
+    <div class="card animate-in" style="border-color:rgba(16,185,129,0.2);">
+        <div class="card-header">
+            <div class="card-title" style="color:#34d399;">🟢 Strong Areas</div>
+            <span class="topic-pill strong">{{ weak_summary.strong|length }}</span>
+        </div>
+        {% if weak_summary.strong %}
+        {% for item in weak_summary.strong %}
+        <div class="topic-score-item">
+            <div class="topic-name" style="width:auto;flex:1;">{{ item.topic }}</div>
+            <div class="fw-bold text-success">{{ item.score }}%</div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p class="fs-xs text-muted">Keep taking quizzes!</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ── Quiz History ────────────────────────────────────── -->
+<div class="card animate-in">
+    <div class="card-header">
+        <div class="card-title">📅 Full Quiz History</div>
+        <span class="topic-pill">{{ quiz_history|length }} quizzes</span>
+    </div>
+    {% if quiz_history %}
+    <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+            <thead>
+                <tr style="border-bottom:1px solid var(--border); color:var(--text-muted);">
+                    <th style="text-align:left; padding:10px 12px;">#</th>
+                    <th style="text-align:left; padding:10px 12px;">Topic</th>
+                    <th style="text-align:left; padding:10px 12px;">Date</th>
+                    <th style="text-align:left; padding:10px 12px;">Score</th>
+                    <th style="text-align:left; padding:10px 12px;">Level</th>
+                    <th style="text-align:left; padding:10px 12px;">Result</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for q in quiz_history|reverse %}
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                    <td style="padding:10px 12px; color:var(--text-muted);">{{ loop.index }}</td>
+                    <td style="padding:10px 12px; color:var(--text-primary);">{{ q.topic|replace('_',' ')|title }}</td>
+                    <td style="padding:10px 12px; color:var(--text-secondary);">{{ q.date }}</td>
+                    <td style="padding:10px 12px;">
+                        <span class="fw-bold {{ 'text-success' if q.score >= 70 else ('text-warning' if q.score >= 40 else 'text-danger') }}">{{ q.score }}%</span>
+                    </td>
+                    <td style="padding:10px 12px;">
+                        <span class="level-badge {{ q.level|lower }}" style="font-size:0.65rem; padding:4px 10px;">{{ q.level }}</span>
+                    </td>
+                    <td style="padding:10px 12px;">
+                        {{ '✅ Pass' if q.score >= 40 else '❌ Fail' }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align:center; padding:32px; color:var(--text-muted);">
+        <div style="font-size:2rem;">📝</div>
+        <p class="fs-sm mt-1">No quiz history yet. Start learning!</p>
+        <a href="{{ url_for('quiz', topic='diagnostic') }}" class="btn btn-primary btn-sm mt-2">Take Diagnostic Quiz</a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+const topicScores = {{ topic_scores | safe }};
+const scoreTrend = {{ score_trend | safe }};
+
+// Score Trend Chart
+const trendCtx = document.getElementById('trendChart').getContext('2d');
+if (scoreTrend.length > 0) {
+    new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: scoreTrend.map(d => d.date),
+            datasets: [{
+                label: 'Score (%)',
+                data: scoreTrend.map(d => d.score),
+                borderColor: '#6366f1',
+                backgroundColor: 'rgba(99,102,241,0.1)',
+                pointBackgroundColor: '#818cf8',
+                pointRadius: 5,
+                tension: 0.4,
+                fill: true,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: (c) => ` ${c.parsed.y}%` } }
+            },
+            scales: {
+                y: { min: 0, max: 100, ticks: { color: '#94a3b8', callback: v => v + '%' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+            }
+        }
+    });
+} else {
+    trendCtx.canvas.parentElement.innerHTML += '<p style="text-align:center;color:#475569;font-size:0.85rem;margin-top:20px;">Take quizzes to see your progress chart.</p>';
+}
+
+// Topic Mastery Bar Chart
+const topicCtx = document.getElementById('topicChart').getContext('2d');
+const topics = Object.keys(topicScores);
+const scores = Object.values(topicScores);
+if (topics.length > 0) {
+    new Chart(topicCtx, {
+        type: 'bar',
+        data: {
+            labels: topics.map(t => t.length > 14 ? t.slice(0,14)+'…' : t),
+            datasets: [{
+                label: 'Mastery %',
+                data: scores,
+                backgroundColor: scores.map(s => s >= 70 ? 'rgba(16,185,129,0.6)' : s >= 40 ? 'rgba(245,158,11,0.6)' : 'rgba(239,68,68,0.6)'),
+                borderColor: scores.map(s => s >= 70 ? '#10b981' : s >= 40 ? '#f59e0b' : '#ef4444'),
+                borderWidth: 1.5,
+                borderRadius: 6,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: (c) => ` ${c.parsed.y}%` } }
+            },
+            scales: {
+                y: { min: 0, max: 100, ticks: { color: '#94a3b8', callback: v => v + '%' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { display: false } }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

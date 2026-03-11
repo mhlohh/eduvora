@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Login — EduVora{% endblock %}
+
+{% block auth_content %}
+<div class="auth-page">
+    <div class="auth-card animate-scale">
+        <div class="auth-logo">
+            <div class="logo-icon">🎓</div>
+            <h1>EduVora</h1>
+            <p style="color: var(--text-secondary); font-size:0.85rem; margin-top:6px;">AI-Powered Smart Learning</p>
+        </div>
+        <p class="auth-subtitle">Welcome back! Sign in to continue your learning journey.</p>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" id="email" class="form-control" placeholder="student@example.com" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" id="password" class="form-control" placeholder="Your password" required>
+            </div>
+
+            <div id="errorMsg" style="display:none; color: var(--danger); font-size:0.85rem; margin-bottom:14px; padding:10px 14px; background:rgba(239,68,68,0.1); border-radius:8px; border:1px solid rgba(239,68,68,0.2);"></div>
+
+            <button type="submit" class="btn btn-primary w-full btn-lg" id="loginBtn" style="justify-content:center;">
+                🚀 Sign In
+            </button>
+        </form>
+
+        <div class="form-divider">or</div>
+
+        <a href="{{ url_for('demo_login') }}" class="btn btn-secondary w-full btn-lg" style="justify-content:center;">
+            👨‍🎓 Try Demo (No Account Needed)
+        </a>
+
+        <p class="text-center mt-2" style="font-size:0.85rem; color:var(--text-secondary);">
+            Don't have an account? <a href="{{ url_for('register') }}">Create one free →</a>
+        </p>
+
+        <!-- Features Preview -->
+        <div style="margin-top:28px; padding:16px; background:rgba(255,255,255,0.03); border-radius:12px; border:1px solid var(--border);">
+            <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:10px; font-weight:600; text-transform:uppercase; letter-spacing:1px;">What you get</p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                <div style="font-size:0.8rem; color:var(--text-secondary);">🧠 AI Level Detection</div>
+                <div style="font-size:0.8rem; color:var(--text-secondary);">📊 Progress Tracking</div>
+                <div style="font-size:0.8rem; color:var(--text-secondary);">💡 Smart Recommendations</div>
+                <div style="font-size:0.8rem; color:var(--text-secondary);">🤖 AI Study Chatbot</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if firebase_config.apiKey %}
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    const app = initializeApp({{ firebase_config | tojson }});
+    const auth = getAuth(app);
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('loginBtn');
+        const errDiv = document.getElementById('errorMsg');
+        btn.disabled = true;
+        btn.textContent = '⏳ Signing in...';
+        errDiv.style.display = 'none';
+
+        try {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const cred = await signInWithEmailAndPassword(auth, email, password);
+            const idToken = await cred.user.getIdToken();
+
+            const res = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idToken, email: cred.user.email, name: cred.user.displayName || 'Student', uid: cred.user.uid })
+            });
+            const data = await res.json();
+            if (data.redirect) window.location.href = data.redirect;
+        } catch (err) {
+            errDiv.textContent = 'Invalid email or password. Please try again.';
+            errDiv.style.display = 'block';
+            btn.disabled = false;
+            btn.innerHTML = '🚀 Sign In';
+        }
+    });
+</script>
+{% else %}
+<script>
+    // Demo mode: direct form login
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('loginBtn');
+        btn.disabled = true;
+        btn.textContent = '⏳ Signing in...';
+        const email = document.getElementById('email').value;
+        const name = email.split('@')[0];
+        const res = await fetch('/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, name, uid: `demo_${Date.now()}` })
+        });
+        const data = await res.json();
+        if (data.redirect) window.location.href = data.redirect;
+        else { btn.disabled = false; btn.innerHTML = '🚀 Sign In'; }
+    });
+</script>
+{% endif %}
+{% endblock %}

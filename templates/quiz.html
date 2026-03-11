@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — EduVora{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_subtitle %}{{ subtitle }}{% endblock %}
+
+{% block content %}
+<div class="quiz-container">
+    <!-- Quiz Header -->
+    <div class="quiz-header animate-in">
+        <div>
+            <div class="quiz-progress-text">Question <span id="currentQ">1</span> of {{ questions|length }}</div>
+            <div class="progress-bar-wrap" style="width:200px; margin-top:8px;">
+                <div class="progress-bar-fill" id="progressBar" style="width:0%"></div>
+            </div>
+        </div>
+        <div class="quiz-timer">
+            ⏱️ <span id="timerDisplay">00:00</span>
+        </div>
+        <div>
+            <span class="topic-pill">{{ topic|replace('_',' ')|title }}</span>
+        </div>
+    </div>
+
+    <!-- Questions -->
+    <div id="questionsContainer">
+        {% for q in questions %}
+        <div class="question-card animate-in" id="qCard{{ loop.index0 }}" style="display:{{ 'block' if loop.first else 'none' }};">
+            <div class="question-number">Question {{ loop.index }} / {{ questions|length }} · {{ q.topic }}</div>
+            <div class="question-text">{{ q.question }}</div>
+            <div class="options-grid">
+                {% for opt in q.options %}
+                <button class="option-btn" data-question="{{ loop.index0 }}" data-option="{{ loop.index0 }}"
+                        onclick="selectAnswer({{ loop.index0 - 1 }}, {{ loop.index0 }}, this)"
+                        id="opt_{{ loop.index0 - 1 }}_{{ loop.index0 }}">
+                    <span class="option-letter">{{ ['A','B','C','D'][loop.index0] }}</span>
+                    {{ opt }}
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Navigation -->
+    <div class="flex justify-between items-center mt-3 animate-in">
+        <button class="btn btn-secondary" id="prevBtn" onclick="navigate(-1)" disabled>← Previous</button>
+        <div class="fs-sm text-muted" id="answerStatus">Select an answer to continue</div>
+        <button class="btn btn-primary" id="nextBtn" onclick="navigate(1)" disabled>Next →</button>
+    </div>
+
+    <!-- Submit -->
+    <div id="submitArea" style="display:none; text-align:center; padding:20px 0;" class="animate-in">
+        <p class="text-secondary fs-sm mb-2">You've answered all {{ questions|length }} questions!</p>
+        <button class="btn btn-success btn-lg" id="submitBtn" onclick="submitQuiz()">
+            🚀 Submit & See Results
+        </button>
+    </div>
+</div>
+
+<!-- Hidden data -->
+<script>
+const QUESTIONS = {{ questions_json | safe }};
+const answers = new Array(QUESTIONS.length).fill(null);
+let currentIndex = 0;
+let startTime = Date.now();
+let timerId;
+
+// Timer
+function updateTimer() {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+    const s = String(elapsed % 60).padStart(2, '0');
+    document.getElementById('timerDisplay').textContent = `${m}:${s}`;
+}
+timerId = setInterval(updateTimer, 1000);
+
+function selectAnswer(questionIdx, optionIdx, btn) {
+    answers[questionIdx] = optionIdx;
+
+    // Clear previous selection for this question
+    const card = document.getElementById(`qCard${questionIdx}`);
+    card.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+
+    document.getElementById('nextBtn').disabled = false;
+    document.getElementById('answerStatus').textContent = '✅ Answer selected';
+
+    // Auto-advance after 0.5s
+    const isLast = currentIndex === QUESTIONS.length - 1;
+    if (!isLast) {
+        setTimeout(() => navigate(1), 500);
+    } else {
+        document.getElementById('submitArea').style.display = 'block';
+        document.getElementById('nextBtn').style.display = 'none';
+    }
+}
+
+function navigate(dir) {
+    const btn = document.getElementById('nextBtn');
+    if (answers[currentIndex] === null && dir > 0) { return; }
+
+    document.getElementById(`qCard${currentIndex}`).style.display = 'none';
+    currentIndex = Math.max(0, Math.min(QUESTIONS.length - 1, currentIndex + dir));
+    document.getElementById(`qCard${currentIndex}`).style.display = 'block';
+
+    document.getElementById('currentQ').textContent = currentIndex + 1;
+    const pct = ((currentIndex + 1) / QUESTIONS.length) * 100;
+    document.getElementById('progressBar').style.width = pct + '%';
+    document.getElementById('prevBtn').disabled = currentIndex === 0;
+    document.getElementById('nextBtn').disabled = answers[currentIndex] === null;
+
+    const isLast = currentIndex === QUESTIONS.length - 1;
+    btn.textContent = isLast ? 'Review' : 'Next →';
+    document.getElementById('answerStatus').textContent = answers[currentIndex] !== null ? '✅ Answer selected' : 'Select an answer to continue';
+
+    if (isLast && answers[currentIndex] !== null) {
+        document.getElementById('submitArea').style.display = 'block';
+    }
+}
+
+async function submitQuiz() {
+    clearInterval(timerId);
+    const timeTaken = Math.floor((Date.now() - startTime) / 1000);
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Analyzing with AI...';
+
+    try {
+        const res = await fetch('/quiz/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ answers, time_taken: timeTaken })
+        });
+        const data = await res.json();
+        if (data.redirect) window.location.href = data.redirect;
+    } catch (err) {
+        showToast('Submission failed. Please try again.', 'error');
+        btn.disabled = false;
+        btn.textContent = '🚀 Submit & See Results';
+    }
+}
+
+// Init progress bar
+document.getElementById('progressBar').style.width = (1/QUESTIONS.length*100) + '%';
+</script>
+{% endblock %}

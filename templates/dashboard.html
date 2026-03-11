@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — EduVora{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Hello, {{ user.name }}! Ready to learn today?{% endblock %}
+
+{% block content %}
+<!-- ── Stats Row ──────────────────────────────────────── -->
+<div class="stats-grid mb-4 animate-in">
+    <div class="stat-card primary">
+        <div class="stat-icon primary">🎯</div>
+        <div>
+            <div class="stat-value">{{ score }}%</div>
+            <div class="stat-label">Latest Score</div>
+        </div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-icon success">📚</div>
+        <div>
+            <div class="stat-value">{{ user.quiz_count or 0 }}</div>
+            <div class="stat-label">Quizzes Taken</div>
+        </div>
+    </div>
+    <div class="stat-card warning">
+        <div class="stat-icon warning">🎓</div>
+        <div>
+            <div class="stat-value">{{ level }}</div>
+            <div class="stat-label">Current Level</div>
+        </div>
+    </div>
+    <div class="stat-card accent">
+        <div class="stat-icon accent">⚠️</div>
+        <div>
+            <div class="stat-value">{{ weak_areas|length }}</div>
+            <div class="stat-label">Weak Areas</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Row 1: Level Card + Weak Areas ────────────────── -->
+<div class="grid-2 mb-4">
+    <!-- Level Card -->
+    <div class="card animate-in">
+        <div class="card-header">
+            <div>
+                <div class="card-title">Your Learning Level</div>
+                <div class="card-subtitle">Based on AI analysis of your quiz performance</div>
+            </div>
+            <span class="level-badge {{ level_info.badge_class }}">
+                {{ level_info.icon }} {{ level }}
+            </span>
+        </div>
+        <p class="text-secondary fs-sm mb-2">{{ level_info.description }}</p>
+
+        {% if level_info.score_needed %}
+        <div style="margin:16px 0;">
+            <div class="flex justify-between fs-sm text-muted mb-1">
+                <span>Progress to {{ level_info.next_level }}</span>
+                <span>Score {{ level_info.score_needed }}+ to advance</span>
+            </div>
+            <div class="progress-bar-wrap">
+                <div class="progress-bar-fill" style="width:{{ [score, 99]|min }}%"></div>
+            </div>
+        </div>
+        {% else %}
+        <div style="margin:16px 0; padding:12px; background:rgba(16,185,129,0.08); border-radius:10px; border:1px solid rgba(16,185,129,0.2);">
+            <p class="text-success fs-sm">🏆 You've reached the highest level! Keep mastering advanced topics.</p>
+        </div>
+        {% endif %}
+
+        <div class="flex gap-1 mt-2">
+            <a href="{{ url_for('quiz', topic='personalized') }}" class="btn btn-primary btn-sm">📝 Take Quiz</a>
+            <a href="{{ url_for('quiz', topic='diagnostic') }}" class="btn btn-secondary btn-sm">🔄 Retake Diagnostic</a>
+        </div>
+    </div>
+
+    <!-- Weak Areas -->
+    <div class="card animate-in">
+        <div class="card-header">
+            <div>
+                <div class="card-title">⚠️ Weak Areas Detected</div>
+                <div class="card-subtitle">Topics that need your attention</div>
+            </div>
+            {% if weak_areas %}
+            <span class="topic-pill weak">{{ weak_areas|length }} topics</span>
+            {% endif %}
+        </div>
+
+        {% if weak_areas %}
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            {% for area in weak_areas %}
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.15); border-radius:10px;">
+                <div>
+                    <div class="fs-sm fw-bold" style="color:var(--text-primary);">{{ area }}</div>
+                    {% for tip in tips if tip.topic == area %}
+                    <div class="fs-xs text-muted mt-1">{{ tip.tip[:80] }}...</div>
+                    {% endfor %}
+                </div>
+                <a href="{{ url_for('quiz', topic=area) }}" class="btn btn-secondary btn-sm">Practice</a>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align:center; padding:24px 0; color:var(--text-muted);">
+            <div style="font-size:2rem; margin-bottom:8px;">🎉</div>
+            <p class="fs-sm">No weak areas detected! Keep up the great work.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ── Row 2: Topic Mastery Chart + Recommendations ─── -->
+<div class="grid-2 mb-4">
+    <!-- Topic Mastery -->
+    <div class="card animate-in">
+        <div class="card-header">
+            <div class="card-title">📊 Topic Mastery</div>
+            <a href="{{ url_for('progress') }}" class="btn btn-secondary btn-sm">View All</a>
+        </div>
+        {% set scores = topic_scores_raw %}
+        {% if scores %}
+        {% for topic, pct in scores.items() %}
+        <div class="topic-score-item">
+            <div class="topic-name">{{ topic[:22] }}{% if topic|length > 22 %}…{% endif %}</div>
+            <div class="topic-bar-wrap">
+                <div class="topic-bar-fill {{ 'good' if pct >= 70 else ('average' if pct >= 40 else 'weak') }}"
+                     style="width:{{ pct }}%"></div>
+            </div>
+            <div class="topic-pct {{ 'text-success' if pct >= 70 else ('text-warning' if pct >= 40 else 'text-danger') }}">{{ pct }}%</div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p class="text-muted fs-sm">Take some quizzes to see your topic mastery here.</p>
+        {% endif %}
+    </div>
+
+    <!-- Top Recommendations -->
+    <div class="card animate-in">
+        <div class="card-header">
+            <div class="card-title">💡 Recommended for You</div>
+            <a href="{{ url_for('recommendations') }}" class="btn btn-secondary btn-sm">See All</a>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            {% for rec in recommendations %}
+            <a href="{{ rec.url }}" target="_blank" style="text-decoration:none;">
+                <div style="display:flex; align-items:center; gap:12px; padding:12px; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; transition:var(--transition);"
+                     onmouseover="this.style.borderColor='var(--border-hover)'" onmouseout="this.style.borderColor='var(--border)'">
+                    <span style="font-size:1.3rem;">{{ rec.icon }}</span>
+                    <div style="flex:1; overflow:hidden;">
+                        <div class="fs-sm fw-bold" style="color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ rec.title }}</div>
+                        <div class="fs-xs text-muted">{{ rec.type|capitalize }} · {{ rec.topic }}</div>
+                    </div>
+                    {% if rec.priority == 'high' %}
+                    <span class="priority-badge high">Priority</span>
+                    {% endif %}
+                </div>
+            </a>
+            {% else %}
+            <p class="text-muted fs-sm">Complete your diagnostic quiz to see personalized recommendations.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- ── Row 3: Learning Roadmap + Quiz History ─────── -->
+<div class="grid-2">
+    <!-- Roadmap -->
+    <div class="card animate-in">
+        <div class="card-header">
+            <div>
+                <div class="card-title">🗺️ {{ roadmap.title }}</div>
+                <div class="card-subtitle">{{ roadmap.estimated_time }}</div>
+            </div>
+        </div>
+        <p class="fs-sm text-secondary mb-2">{{ roadmap.description }}</p>
+        {% for step in roadmap.steps %}
+        <div class="roadmap-step">
+            <div class="step-num">{{ loop.index }}</div>
+            <div class="fs-sm" style="color:var(--text-secondary);">{{ step }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Quiz History -->
+    <div class="card animate-in">
+        <div class="card-header">
+            <div class="card-title">📅 Recent Quiz History</div>
+            <a href="{{ url_for('progress') }}" class="btn btn-secondary btn-sm">Full History</a>
+        </div>
+        {% if quiz_history %}
+        <div style="display:flex; flex-direction:column; gap:8px;">
+            {% for quiz in quiz_history|reverse %}
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:rgba(255,255,255,0.03); border-radius:10px; border:1px solid var(--border);">
+                <div>
+                    <div class="fs-sm fw-bold">{{ quiz.topic|replace('_', ' ')|title }}</div>
+                    <div class="fs-xs text-muted">{{ quiz.date }}</div>
+                </div>
+                <div style="text-align:right;">
+                    <div class="fw-bold {{ 'text-success' if quiz.score >= 70 else ('text-warning' if quiz.score >= 40 else 'text-danger') }}">{{ quiz.score }}%</div>
+                    <span class="level-badge {{ quiz.level|lower }}" style="font-size:0.65rem; padding:3px 8px;">{{ quiz.level }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align:center; padding:24px 0; color:var(--text-muted);">
+            <div style="font-size:2rem; margin-bottom:8px;">📝</div>
+            <p class="fs-sm">No quizzes taken yet. Start with the diagnostic quiz!</p>
+            <a href="{{ url_for('quiz', topic='diagnostic') }}" class="btn btn-primary btn-sm mt-2">Start Now →</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

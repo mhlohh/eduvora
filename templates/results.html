@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Quiz Results — EduVora{% endblock %}
+{% block page_title %}Quiz Results{% endblock %}
+{% block page_subtitle %}AI has analyzed your performance{% endblock %}
+
+{% block content %}
+<div style="max-width:900px; margin:0 auto;">
+    <!-- Score Card -->
+    <div class="card text-center mb-4 animate-in" style="background: linear-gradient(135deg, rgba(99,102,241,0.1), rgba(139,92,246,0.05)); border-color: rgba(99,102,241,0.3);">
+        <div class="mb-3">
+            <div class="score-circle" style="--pct: {{ result.score * 3.6 }}deg;">
+                <div class="score-value">{{ result.score }}%</div>
+            </div>
+        </div>
+        <h2 style="font-size:1.5rem; margin-bottom:8px;">
+            {% if result.score >= 70 %}🎉 Excellent Performance!
+            {% elif result.score >= 40 %}👍 Good Effort!
+            {% else %}📚 Keep Practicing!
+            {% endif %}
+        </h2>
+        <p class="text-secondary fs-sm mb-3">You answered {{ result.correct }} out of {{ result.total }} questions correctly in {{ (result.time_taken // 60) }}m {{ (result.time_taken % 60) }}s</p>
+        <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
+            <span class="level-badge {{ level_info.badge_class }}">{{ level_info.icon }} {{ result.new_level }}</span>
+            <span class="topic-pill">📝 {{ result.topic|replace('_',' ')|title }}</span>
+        </div>
+    </div>
+
+    <!-- AI Analysis Row -->
+    <div class="grid-2 mb-4">
+        <!-- Topic Scores -->
+        <div class="card animate-in">
+            <div class="card-header"><div class="card-title">🧠 AI Topic Analysis</div></div>
+            {% if result.topic_scores %}
+            {% for topic, pct in result.topic_scores.items() %}
+            <div class="topic-score-item">
+                <div class="topic-name">{{ topic[:20] }}{% if topic|length > 20 %}…{% endif %}</div>
+                <div class="topic-bar-wrap">
+                    <div class="topic-bar-fill {{ 'good' if pct >= 70 else ('average' if pct >= 40 else 'weak') }}"
+                         style="width:{{ pct }}%"></div>
+                </div>
+                <div class="topic-pct {{ 'text-success' if pct >= 70 else ('text-warning' if pct >= 40 else 'text-danger') }}">{{ pct }}%</div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p class="text-muted fs-sm">Quiz covered multiple topics — see weak areas below.</p>
+            {% endif %}
+        </div>
+
+        <!-- Weak Areas + Tips -->
+        <div class="card animate-in">
+            <div class="card-header"><div class="card-title">⚠️ Areas to Improve</div></div>
+            {% if result.weak_areas %}
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                {% for area in result.weak_areas[:4] %}
+                <div style="padding:12px; background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.15); border-radius:10px;">
+                    <div class="flex justify-between mb-1">
+                        <span class="fs-sm fw-bold">{{ area }}</span>
+                        <span class="topic-pill weak">Needs Work</span>
+                    </div>
+                    {% for tip in tips if tip.topic == area %}
+                    <div class="fs-xs text-muted">💡 {{ tip.tip[:100] }}</div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="text-align:center; padding:20px; color:var(--text-muted);">
+                <div style="font-size:2rem;">🌟</div>
+                <p class="fs-sm mt-1">Great job! No significant weak areas detected.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Answer Review -->
+    <div class="card mb-4 animate-in">
+        <div class="card-header">
+            <div class="card-title">📋 Answer Review</div>
+            <span class="topic-pill">{{ result.correct }}/{{ result.total }} correct</span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:12px; max-height:400px; overflow-y:auto; padding-right:4px;">
+            {% for detail in result.answer_details %}
+            <div style="padding:16px; background:{{ 'rgba(16,185,129,0.06)' if detail.is_correct else 'rgba(239,68,68,0.06)' }}; border:1px solid {{ 'rgba(16,185,129,0.2)' if detail.is_correct else 'rgba(239,68,68,0.2)' }}; border-radius:12px;">
+                <div class="flex items-center gap-2 mb-2">
+                    <span>{{ '✅' if detail.is_correct else '❌' }}</span>
+                    <span class="fs-sm fw-bold" style="color:var(--text-primary);">Q{{ loop.index }}: {{ detail.question }}</span>
+                </div>
+                {% if not detail.is_correct %}
+                <div class="fs-xs" style="color:#34d399; margin-bottom:6px;">✅ Correct: {{ detail.correct_option }}</div>
+                {% endif %}
+                {% if detail.explanation %}
+                <div class="fs-xs text-muted">💡 {{ detail.explanation }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Recommendations -->
+    <div class="card mb-4 animate-in">
+        <div class="card-header">
+            <div class="card-title">💡 Personalized Resources</div>
+            <a href="{{ url_for('recommendations') }}" class="btn btn-secondary btn-sm">See All</a>
+        </div>
+        <div class="grid-auto">
+            {% for rec in recommendations[:4] %}
+            <a href="{{ rec.url }}" target="_blank" class="resource-card" style="text-decoration:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span class="resource-type">{{ rec.type }}</span>
+                    {% if rec.priority == 'high' %}<span class="priority-badge high">Priority</span>{% endif %}
+                </div>
+                <div style="font-size:1.5rem;">{{ rec.icon }}</div>
+                <div class="resource-title">{{ rec.title }}</div>
+                <div class="resource-desc">{{ rec.description[:80] }}...</div>
+                <span class="topic-pill">{{ rec.topic }}</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex gap-2 justify-between animate-in" style="flex-wrap:wrap;">
+        <a href="{{ url_for('quiz', topic='personalized') }}" class="btn btn-primary btn-lg">📝 Take Another Quiz</a>
+        <a href="{{ url_for('chatbot') }}" class="btn btn-secondary btn-lg">🤖 Ask AI Assistant</a>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-lg">🏠 Dashboard</a>
+    </div>
+</div>
+{% endblock %}
