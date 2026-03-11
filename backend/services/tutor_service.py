@@ -20,22 +20,24 @@ def _build_system_prompt(profile: dict, user_name: str) -> str:
 
 
 def _llm_chat(message: str, profile: dict, user_name: str) -> str | None:
-    if not settings.openai_api_key:
+    if not settings.gemini_api_key:
         return None
 
-    url = f"{settings.openai_base_url.rstrip('/')}/chat/completions"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={settings.gemini_api_key}"
     headers = {
-        "Authorization": f"Bearer {settings.openai_api_key}",
         "Content-Type": "application/json",
     }
+    
+    system_instruction = _build_system_prompt(profile, user_name)
+    
     payload = {
-        "model": settings.openai_model,
-        "temperature": settings.tutor_temperature,
-        "max_tokens": settings.tutor_max_tokens,
-        "messages": [
-            {"role": "system", "content": _build_system_prompt(profile, user_name)},
-            {"role": "user", "content": message},
+        "contents": [
+            {"role": "user", "parts": [{"text": system_instruction + "\n\nStudent asks: " + message}]}
         ],
+        "generationConfig": {
+            "temperature": settings.tutor_temperature,
+            "maxOutputTokens": settings.tutor_max_tokens,
+        }
     }
 
     try:
@@ -43,8 +45,9 @@ def _llm_chat(message: str, profile: dict, user_name: str) -> str | None:
             response = client.post(url, headers=headers, json=payload)
             response.raise_for_status()
             data = response.json()
-            return data["choices"][0]["message"]["content"].strip()
-    except Exception:
+            return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+    except Exception as e:
+        print(f"Gemini API Error: {e}")
         return None
 
 
