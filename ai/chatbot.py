@@ -1,29 +1,23 @@
 """
-AI Study Assistant Chatbot - Powered by Google Gemini.
-Falls back to rule-based responses if API is unavailable.
+AI Study Assistant Chatbot - Powered by local Ollama (DeepSeek R1).
+Falls back to rule-based responses if Ollama is unavailable.
 """
 import os
+import ollama
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Configure Gemini — try new SDK first, fall back to old
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-_genai = None
-_use_new_sdk = False
+# Configure Ollama
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "deepseek-r1")
 
-if GEMINI_API_KEY:
-    try:
-        from google import genai as new_genai
-        _client = new_genai.Client(api_key=GEMINI_API_KEY)
-        _use_new_sdk = True
-    except Exception:
-        try:
-            import google.generativeai as old_genai
-            old_genai.configure(api_key=GEMINI_API_KEY)
-            _genai = old_genai
-        except Exception:
-            pass
+# Standardize the client
+_client = None
+try:
+    _client = ollama.Client(host=OLLAMA_BASE_URL)
+except Exception as e:
+    print(f"Ollama connection error: {e}")
 
 SYSTEM_PROMPT = """You are EduBot, an AI Study Assistant for an online Learning Management System called EduVora.
 You are a friendly, encouraging, and highly knowledgeable tutor specializing in:
@@ -75,65 +69,38 @@ def get_rule_based_response(message: str) -> str | None:
 
 def chat(message: str, history: list = None) -> str:
     """
-    Send a message to EduBot and get a response.
+    Send a message to EduBot (Ollama) and get a response.
 
     Args:
         message: User's question/message
-        history: List of previous messages [{"role": "user/model", "content": "..."}]
+        history: List of previous messages [{"role": "user/assistant", "content": "..."}]
 
     Returns:
         Bot response string
     """
-    # Try new google.genai SDK
-    if GEMINI_API_KEY and _use_new_sdk:
+    if _client:
         try:
-            from google import genai as new_genai
-            from google.genai import types as genai_types
-
-            contents = []
+            messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+            
             if history:
                 for msg in history[-6:]:
-                    role = "user" if msg["role"] == "user" else "model"
-                    contents.append(
-                        genai_types.Content(role=role, parts=[genai_types.Part(text=msg["content"])])
-                    )
-            contents.append(
-                genai_types.Content(role="user", parts=[genai_types.Part(text=message)])
-            )
+                    # Ensure role matches Ollama/standard expectations (user/assistant)
+                    role = "assistant" if msg["role"] in ("model", "assistant") else "user"
+                    messages.append({"role": role, "content": msg["content"]})
+            
+            messages.append({"role": "user", "content": message})
 
-            client = new_genai.Client(api_key=GEMINI_API_KEY)
-            response = client.models.generate_content(
-                model="gemini-2.0-flash",
-                contents=contents,
-                config=genai_types.GenerateContentConfig(
-                    system_instruction=SYSTEM_PROMPT,
-                    temperature=0.7,
-                    max_output_tokens=512,
-                ),
+            response = _client.chat(
+                model=OLLAMA_MODEL,
+                messages=messages,
+                options={
+                    "temperature": 0.7,
+                    "num_predict": 512,
+                }
             )
-            return response.text
+            return response['message']['content']
         except Exception as e:
-            print(f"Gemini (new SDK) error: {e}")
-
-    # Try old google.generativeai SDK
-    if GEMINI_API_KEY and _genai:
-        try:
-            model = _genai.GenerativeModel(
-                model_name="gemini-1.5-flash",
-                system_instruction=SYSTEM_PROMPT,
-            )
-            chat_history = []
-            if history:
-                for msg in history[-6:]:
-                    chat_history.append({
-                        "role": msg["role"],
-                        "parts": [msg["content"]],
-                    })
-            chat_session = model.start_chat(history=chat_history)
-            response = chat_session.send_message(message)
-            return response.text
-        except Exception as e:
-            print(f"Gemini (old SDK) error: {e}")
+            print(f"Ollama chat error: {e}")
 
     # Rule-based fallback
     rule_response = get_rule_based_response(message)

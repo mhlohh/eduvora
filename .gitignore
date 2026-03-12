@@ -1,6 +1,29 @@
+# Environment variables
 .env
-serviceAccountKey.json
-__pycache__/
-venv/
-*.pyc
 backend/.env
+
+# Secrets
+serviceAccountKey.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.venv_local/
+venv/
+
+# Databases
+*.db
+*.sqlite3
+
+# Frontend
+**/node_modules/
+**/dist/
+**/.next/
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store

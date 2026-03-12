@@ -37,7 +37,31 @@ docker compose up --build
 - `POST /api/auth/firebase` (Firebase ID token verification if `serviceAccountKey.json` is available)
 
 ## Generative AI Tutor
-- Endpoint: `POST /api/tutor/chat`
+- Endpoint: `POST /api/chat`
 - Uses learner profile context (`knowledge_level`, `learning_speed`, weak/strong topics) for personalized responses.
-- If `GEMINI_API_KEY` is configured, tutor runs in Gemini generative mode.
-- If no key is configured or provider fails, it automatically falls back to rule-based responses.
+- Powered by **local Ollama** running the **DeepSeek R1** model.
+- If Ollama is running and `deepseek-r1` is available, the tutor uses full generative reasoning.
+- Falls back to rule-based responses if the local LLM service is unavailable.
+
+## Setup & Configuration
+
+### 1. Environment Variables
+Copy `.env.example` to `.env` and configure the following:
+```bash
+# Ollama AI Configuration
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=deepseek-r1
+```
+
+### 2. Ollama Setup
+1. [Install Ollama](https://ollama.com/download)
+2. Pull the required model:
+   ```bash
+   ollama pull deepseek-r1
+   ```
+
+### 3. Installation
+```bash
+pip install -r requirements.txt
+python app.py
+```
